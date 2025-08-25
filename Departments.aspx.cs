@@ -11,10 +11,13 @@ namespace PhoneDir.Masters
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            LoadAllDepartments();
             if (!IsPostBack)
             {
                 BindCompaniesCheckList();
                 BindCompanyDropdown();
+                LoadDepartmentsForCompany();
+
             }
         }
 
@@ -27,9 +30,7 @@ namespace PhoneDir.Masters
                 SqlCommand cmd = new SqlCommand("SELECT OrgID, OrgName FROM OrgMasters ORDER BY SortOrder", conn);
                 SqlDataReader dr = cmd.ExecuteReader();
                 while (dr.Read())
-                {
                     chkCompanies.Items.Add(new ListItem(dr["OrgName"].ToString(), dr["OrgID"].ToString()));
-                }
             }
         }
 
@@ -43,9 +44,7 @@ namespace PhoneDir.Masters
                 SqlCommand cmd = new SqlCommand("SELECT OrgID, OrgName FROM OrgMasters ORDER BY SortOrder", conn);
                 SqlDataReader dr = cmd.ExecuteReader();
                 while (dr.Read())
-                {
                     ddlCompanies.Items.Add(new ListItem(dr["OrgName"].ToString(), dr["OrgID"].ToString()));
-                }
             }
         }
 
@@ -91,6 +90,7 @@ namespace PhoneDir.Masters
             ShowMessage("Department saved successfully.");
             ClearForm();
             LoadDepartmentsForCompany();
+            LoadAllDepartments();
         }
 
         protected void ddlCompanies_SelectedIndexChanged(object sender, EventArgs e)
@@ -118,11 +118,37 @@ namespace PhoneDir.Masters
 
                     TableCell actions = new TableCell();
                     Button btn = new Button { Text = "Delete", CssClass = "btn" };
-                    btn.Attributes["onclick"] = $"deleteDept({dr["DeptID"]}); return false;";
+                    btn.CommandArgument = dr["DeptID"].ToString();
+                    btn.Click += btnDelete_Click;
                     actions.Controls.Add(btn);
                     tr.Cells.Add(actions);
 
                     tblDeptsBody.Controls.Add(tr);
+                }
+            }
+        }
+
+        private void LoadAllDepartments()
+        {
+            tblAllDeptsBody.Controls.Clear();
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+                SqlCommand cmd = new SqlCommand("SELECT DeptID, DeptName FROM DeptMasters ORDER BY DeptName", conn);
+                SqlDataReader dr = cmd.ExecuteReader();
+                while (dr.Read())
+                {
+                    TableRow tr = new TableRow();
+                    tr.Cells.Add(new TableCell { Text = dr["DeptName"].ToString() });
+
+                    TableCell actions = new TableCell();
+                    Button btnDeleteAll = new Button { Text = "Delete All", CssClass = "btn" };
+                    btnDeleteAll.CommandArgument = dr["DeptID"].ToString();
+                    btnDeleteAll.Click += btnDeleteAll_Click;
+                    actions.Controls.Add(btnDeleteAll);
+
+                    tr.Cells.Add(actions);
+                    tblAllDeptsBody.Controls.Add(tr);
                 }
             }
         }
@@ -152,20 +178,16 @@ namespace PhoneDir.Masters
 
         protected void btnDelete_Click(object sender, EventArgs e)
         {
-            var arg = hdnDeleteArgs?.Value;
-            if (string.IsNullOrEmpty(arg)) { ShowMessage("No delete parameters passed", true); return; }
+            Button btn = (Button)sender;
+            int deptId = int.Parse(btn.CommandArgument);
 
-            var parts = arg.Split('|');
-            if (parts.Length < 2) { ShowMessage("Invalid delete parameters", true); return; }
-
-            int deptId = int.Parse(parts[0]);
-            int orgId = int.Parse(parts[1]);
+            int orgId = int.Parse(ddlCompanies.SelectedValue);
+            if (orgId == 0) { ShowMessage("Select a company first", true); return; }
 
             using (SqlConnection conn = new SqlConnection(connStr))
             {
                 conn.Open();
-                SqlCommand cmd = new SqlCommand(
-                    "DELETE FROM DeptCompanyMapping WHERE DeptID=@DeptID AND OrgID=@OrgID", conn);
+                SqlCommand cmd = new SqlCommand("DELETE FROM DeptCompanyMapping WHERE DeptID=@DeptID AND OrgID=@OrgID", conn);
                 cmd.Parameters.AddWithValue("@DeptID", deptId);
                 cmd.Parameters.AddWithValue("@OrgID", orgId);
                 cmd.ExecuteNonQuery();
@@ -173,6 +195,29 @@ namespace PhoneDir.Masters
 
             ShowMessage("Department removed from the selected company.");
             LoadDepartmentsForCompany();
+        }
+
+        protected void btnDeleteAll_Click(object sender, EventArgs e)
+        {
+            Button btn = (Button)sender;
+            int deptId = int.Parse(btn.CommandArgument);
+
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+
+                SqlCommand cmdMap = new SqlCommand("DELETE FROM DeptCompanyMapping WHERE DeptID=@DeptID", conn);
+                cmdMap.Parameters.AddWithValue("@DeptID", deptId);
+                cmdMap.ExecuteNonQuery();
+
+                SqlCommand cmdDept = new SqlCommand("DELETE FROM DeptMasters WHERE DeptID=@DeptID", conn);
+                cmdDept.Parameters.AddWithValue("@DeptID", deptId);
+                cmdDept.ExecuteNonQuery();
+            }
+
+            ShowMessage("Department deleted completely.");
+            LoadDepartmentsForCompany();
+            LoadAllDepartments();
         }
 
         private void ShowMessage(string msg, bool isError = false)

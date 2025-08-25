@@ -20,6 +20,8 @@
 </style>
 
 <div class="page-content">
+
+    <!-- Company-specific Departments -->
     <div class="page-header">
         <h2>🏢 Manage Departments</h2>
         <p class="subtitle">Add, reorder, or remove departments per company</p>
@@ -47,9 +49,8 @@
             AutoPostBack="true" OnSelectedIndexChanged="ddlCompanies_SelectedIndexChanged" />
     </div>
 
-    <!-- Departments Table -->
+    <!-- Company-specific Departments Table -->
     <asp:HiddenField ID="hfDeptOrder" runat="server" />
-    <asp:HiddenField ID="hdnDeleteArgs" runat="server" />
 
     <table id="tblDepts" class="table">
         <thead>
@@ -63,6 +64,16 @@
 
     <asp:Button ID="btnSaveOrder" runat="server" Text="Save Order" CssClass="btn" OnClick="btnSaveOrder_Click" />
     <asp:Button ID="btnDelete" runat="server" Style="display:none;" OnClick="btnDelete_Click" />
+
+    <!-- All Departments Section -->
+    <hr />
+    <div class="page-header">
+        <h2>🗂️ All Departments</h2>
+        <p class="subtitle">Delete any department completely from all companies</p>
+    </div>
+
+    <asp:Table ID="tblAllDeptsBody" runat="server" CssClass="table"></asp:Table>
+
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
@@ -70,35 +81,16 @@
     document.addEventListener('DOMContentLoaded', function () {
         var tbody = document.getElementById('<%= tblDeptsBody.ClientID %>');
 
-    // Enable drag & drop
-    Sortable.create(tbody, {
-        animation: 150,
-        ghostClass: 'drag-placeholder',
-        onEnd: function () {
-            var ids = Array.from(tbody.children).map(function (r) {
-                return r.getAttribute('data-id');
-            });
-            document.getElementById('<%= hfDeptOrder.ClientID %>').value = ids.join(',');
-        }
+        Sortable.create(tbody, {
+            animation: 150,
+            ghostClass: 'drag-placeholder',
+            onEnd: function () {
+                var ids = Array.from(tbody.children).map(function (r) {
+                    return r.getAttribute('data-id');
+                });
+                document.getElementById('<%= hfDeptOrder.ClientID %>').value = ids.join(',');
+            }
+        });
     });
-
-    // Delete function
-    window.deleteDept = function (deptId) {
-        var ddl = document.getElementById('<%= ddlCompanies.ClientID %>');
-        var orgId = ddl ? ddl.value : null;
-
-        if (!orgId || orgId === "0") {
-            alert('Select a company first.');
-            return;
-        }
-        if (!confirm("Remove this department from the selected company?")) return;
-
-        // Pass parameters to hidden field
-        document.getElementById('<%= hdnDeleteArgs.ClientID %>').value = deptId + '|' + orgId;
-
-        // Trigger server-side delete
-        __doPostBack('<%= btnDelete.UniqueID %>', '');
-    }
-});
 </script>
 </asp:Content>
