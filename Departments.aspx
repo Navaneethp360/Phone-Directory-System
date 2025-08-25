@@ -1,0 +1,104 @@
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="Departments.aspx.cs" Inherits="PhoneDir.Masters.Departments" MasterPageFile="~/Site.master" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
+<style>
+.page-content { background: rgba(255,255,255,0.65); backdrop-filter: blur(10px); border:1px solid rgba(200,200,200,0.4); border-radius:16px; padding:20px; box-shadow:0 8px 20px rgba(0,0,0,0.05); }
+.page-header { margin-bottom:15px; padding:10px 15px; border-bottom:1px solid #e9f2fa; background-color:#e9f2fa; border-radius:8px; }
+.page-header h2 { color:#2c7db1; font-size:1.5rem; display:flex; align-items:center; }
+.form-group { margin-bottom:12px; }
+.form-control, select { width:100%; padding:8px 10px; border:1px solid #cfdfee; border-radius:6px; font-size:0.9rem; }
+.form-control:focus, select:focus { border-color:#2c7db1; outline:none; }
+.btn { padding:8px 16px; background:linear-gradient(135deg,#4a90e2,#357ABD); color:white; border:1.5px solid #2c7db1; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.9rem; margin-right:5px; }
+.btn:hover { background:linear-gradient(135deg,#357ABD,#255A88); }
+.table { width:100%; border-collapse:collapse; margin-top:15px; border-radius:10px; overflow:hidden; }
+.table th, .table td { padding:10px 12px; border-bottom:1px solid #e2effa; text-align:left; }
+.table th { background:#f0f8ff; font-weight:600; color:#2c7db1; }
+.table tr:hover { background: rgba(240,248,255,0.3); cursor: grab; }
+.status-message { display:block; padding:10px 16px; margin-bottom:15px; border-radius:6px; font-weight:500; font-size:0.9rem; border:1px solid; background-color:#e8f5e9; color:#2e7d32; border-color:#c8e6c9; box-shadow:0 1px 4px rgba(0,0,0,0.04); }
+.status-message.error { background-color:#fcebea; color:#c62828; border-color:#f5c6cb; }
+.drag-placeholder { background-color: rgba(44,125,177,0.1); height:50px; margin-bottom:5px; border:1px dashed #2c7db1; border-radius:4px; }
+</style>
+
+<div class="page-content">
+    <div class="page-header">
+        <h2>🏢 Manage Departments</h2>
+        <p class="subtitle">Add, reorder, or remove departments per company</p>
+    </div>
+
+    <asp:Label ID="lblMessage" runat="server" CssClass="status-message" Visible="false" />
+
+    <!-- Add Department -->
+    <div class="form-group">
+        <label>Department Name:</label>
+        <asp:TextBox ID="txtDeptName" runat="server" CssClass="form-control" />
+    </div>
+    <div class="form-group">
+        <label>Assign to Companies:</label>
+        <asp:CheckBoxList ID="chkCompanies" runat="server" RepeatDirection="Horizontal" CssClass="form-control" />
+    </div>
+    <asp:Button ID="btnAddDept" runat="server" Text="Add / Update Department" CssClass="btn" OnClick="btnAddDept_Click" />
+
+    <hr />
+
+    <!-- Company Dropdown -->
+    <div class="form-group">
+        <label>Select Company:</label>
+        <asp:DropDownList ID="ddlCompanies" runat="server" CssClass="form-control"
+            AutoPostBack="true" OnSelectedIndexChanged="ddlCompanies_SelectedIndexChanged" />
+    </div>
+
+    <!-- Departments Table -->
+    <asp:HiddenField ID="hfDeptOrder" runat="server" />
+    <asp:HiddenField ID="hdnDeleteArgs" runat="server" />
+
+    <table id="tblDepts" class="table">
+        <thead>
+            <tr>
+                <th>Department Name</th>
+                <th style="width:180px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody id="tblDeptsBody" runat="server"></tbody>
+    </table>
+
+    <asp:Button ID="btnSaveOrder" runat="server" Text="Save Order" CssClass="btn" OnClick="btnSaveOrder_Click" />
+    <asp:Button ID="btnDelete" runat="server" Style="display:none;" OnClick="btnDelete_Click" />
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var tbody = document.getElementById('<%= tblDeptsBody.ClientID %>');
+
+    // Enable drag & drop
+    Sortable.create(tbody, {
+        animation: 150,
+        ghostClass: 'drag-placeholder',
+        onEnd: function () {
+            var ids = Array.from(tbody.children).map(function (r) {
+                return r.getAttribute('data-id');
+            });
+            document.getElementById('<%= hfDeptOrder.ClientID %>').value = ids.join(',');
+        }
+    });
+
+    // Delete function
+    window.deleteDept = function (deptId) {
+        var ddl = document.getElementById('<%= ddlCompanies.ClientID %>');
+        var orgId = ddl ? ddl.value : null;
+
+        if (!orgId || orgId === "0") {
+            alert('Select a company first.');
+            return;
+        }
+        if (!confirm("Remove this department from the selected company?")) return;
+
+        // Pass parameters to hidden field
+        document.getElementById('<%= hdnDeleteArgs.ClientID %>').value = deptId + '|' + orgId;
+
+        // Trigger server-side delete
+        __doPostBack('<%= btnDelete.UniqueID %>', '');
+    }
+});
+</script>
+</asp:Content>
