@@ -2,12 +2,19 @@
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Web.UI.WebControls;
+using System.Data;
 
 namespace PhoneDir.Masters
 {
     public partial class Departments : System.Web.UI.Page
     {
         private string connStr = System.Configuration.ConfigurationManager.ConnectionStrings["DefaultConnection"].ConnectionString;
+
+        protected void Page_Init(object sender, EventArgs e)
+        {
+            if (ddlCompanies.SelectedIndex > 0)
+                LoadDepartmentsForCompany();
+        }
 
         protected void Page_Load(object sender, EventArgs e)
         {
@@ -16,8 +23,7 @@ namespace PhoneDir.Masters
             {
                 BindCompaniesCheckList();
                 BindCompanyDropdown();
-                LoadDepartmentsForCompany();
-
+                
             }
         }
 
@@ -69,7 +75,8 @@ namespace PhoneDir.Masters
                 if (obj == null)
                 {
                     SqlCommand insertCmd = new SqlCommand(
-                        "INSERT INTO DeptMasters (DeptName, SortOrder) OUTPUT INSERTED.DeptID VALUES (@Name, ISNULL((SELECT MAX(SortOrder) FROM DeptMasters),0)+1)", conn);
+                        "INSERT INTO DeptMasters (DeptName, SortOrder) OUTPUT INSERTED.DeptID " +
+                        "VALUES (@Name, ISNULL((SELECT MAX(SortOrder) FROM DeptMasters),0)+1)", conn);
                     insertCmd.Parameters.AddWithValue("@Name", deptName);
                     deptId = (int)insertCmd.ExecuteScalar();
                 }
@@ -80,7 +87,8 @@ namespace PhoneDir.Masters
                 {
                     SqlCommand mapCmd = new SqlCommand(
                         "IF NOT EXISTS (SELECT 1 FROM DeptCompanyMapping WHERE DeptID=@DeptID AND OrgID=@OrgID) " +
-                        "INSERT INTO DeptCompanyMapping (DeptID, OrgID, SortOrder) VALUES (@DeptID,@OrgID, ISNULL((SELECT MAX(SortOrder) FROM DeptCompanyMapping WHERE OrgID=@OrgID),0)+1)", conn);
+                        "INSERT INTO DeptCompanyMapping (DeptID, OrgID, SortOrder) " +
+                        "VALUES (@DeptID, @OrgID, ISNULL((SELECT MAX(SortOrder) FROM DeptCompanyMapping WHERE OrgID=@OrgID),0)+1)", conn);
                     mapCmd.Parameters.AddWithValue("@DeptID", deptId);
                     mapCmd.Parameters.AddWithValue("@OrgID", orgId);
                     mapCmd.ExecuteNonQuery();
@@ -100,37 +108,92 @@ namespace PhoneDir.Masters
 
         private void LoadDepartmentsForCompany()
         {
-            tblDeptsBody.Controls.Clear();
-            int orgId = int.Parse(ddlCompanies.SelectedValue);
-            if (orgId == 0) return;
+            gvDepartments.DataSource = null;
+            gvDepartments.DataBind();
+
+            if (!int.TryParse(ddlCompanies.SelectedValue, out int orgId) || orgId == 0)
+                return;
 
             using (SqlConnection conn = new SqlConnection(connStr))
             {
                 conn.Open();
                 SqlCommand cmd = new SqlCommand(
-                    "SELECT d.DeptID, d.DeptName FROM DeptCompanyMapping m INNER JOIN DeptMasters d ON m.DeptID=d.DeptID WHERE m.OrgID=@OrgID ORDER BY m.SortOrder", conn);
+                    "SELECT d.DeptID, d.DeptName FROM DeptCompanyMapping m " +
+                    "INNER JOIN DeptMasters d ON m.DeptID=d.DeptID " +
+                    "WHERE m.OrgID=@OrgID ORDER BY m.SortOrder", conn);
                 cmd.Parameters.AddWithValue("@OrgID", orgId);
-                SqlDataReader dr = cmd.ExecuteReader();
-                while (dr.Read())
+                SqlDataAdapter da = new SqlDataAdapter(cmd);
+                DataTable dt = new DataTable();
+                da.Fill(dt);
+
+                gvDepartments.DataSource = dt;
+                gvDepartments.DataBind();
+            }
+        }
+
+        protected void gvDepartments_RowDataBound(object sender, GridViewRowEventArgs e)
+        {
+            if (e.Row.RowType == DataControlRowType.DataRow)
+            {
+                e.Row.Attributes["data-id"] = gvDepartments.DataKeys[e.Row.RowIndex].Value.ToString();
+            }
+        }
+
+        protected void gvDepartments_RowCommand(object sender, GridViewCommandEventArgs e)
+        {
+            if (e.CommandName != "DeleteDept") return;
+            if (!int.TryParse(e.CommandArgument.ToString(), out int deptId)) return;
+            if (!int.TryParse(ddlCompanies.SelectedValue, out int orgId) || orgId == 0)
+            {
+                ShowMessage("Select a company first", true);
+                return;
+            }
+
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+                SqlCommand cmd = new SqlCommand(
+                    "DELETE FROM DeptCompanyMapping WHERE DeptID=@DeptID AND OrgID=@OrgID", conn);
+                cmd.Parameters.AddWithValue("@DeptID", deptId);
+                cmd.Parameters.AddWithValue("@OrgID", orgId);
+                int rows = cmd.ExecuteNonQuery();
+                if (rows == 0)
                 {
-                    TableRow tr = new TableRow { Attributes = { ["data-id"] = dr["DeptID"].ToString() } };
-                    tr.Cells.Add(new TableCell { Text = dr["DeptName"].ToString() });
-
-                    TableCell actions = new TableCell();
-                    Button btn = new Button { Text = "Delete", CssClass = "btn" };
-                    btn.CommandArgument = dr["DeptID"].ToString();
-                    btn.Click += btnDelete_Click;
-                    actions.Controls.Add(btn);
-                    tr.Cells.Add(actions);
-
-                    tblDeptsBody.Controls.Add(tr);
+                    ShowMessage("Nothing was deleted. Mapping may not exist.", true);
+                    return;
                 }
             }
+
+            ShowMessage("Department removed from the selected company.");
+            LoadDepartmentsForCompany();
+        }
+
+        protected void btnSaveOrder_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(hfDeptOrder.Value)) return;
+            if (!int.TryParse(ddlCompanies.SelectedValue, out int orgId) || orgId == 0) return;
+
+            string[] ids = hfDeptOrder.Value.Split(',');
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+                for (int i = 0; i < ids.Length; i++)
+                {
+                    SqlCommand cmd = new SqlCommand(
+                        "UPDATE DeptCompanyMapping SET SortOrder=@Sort WHERE DeptID=@DeptID AND OrgID=@OrgID", conn);
+                    cmd.Parameters.AddWithValue("@Sort", i + 1);
+                    cmd.Parameters.AddWithValue("@DeptID", int.Parse(ids[i]));
+                    cmd.Parameters.AddWithValue("@OrgID", orgId);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            ShowMessage("Order saved successfully.");
+            LoadDepartmentsForCompany();
         }
 
         private void LoadAllDepartments()
         {
-            tblAllDeptsBody.Controls.Clear();
+            tblAllDeptsBody.Rows.Clear();
             using (SqlConnection conn = new SqlConnection(connStr))
             {
                 conn.Open();
@@ -144,68 +207,23 @@ namespace PhoneDir.Masters
                     TableCell actions = new TableCell();
                     Button btnDeleteAll = new Button { Text = "Delete All", CssClass = "btn" };
                     btnDeleteAll.CommandArgument = dr["DeptID"].ToString();
-                    btnDeleteAll.Click += btnDeleteAll_Click;
+                    btnDeleteAll.Click += BtnDeleteAll_Click;
                     actions.Controls.Add(btnDeleteAll);
 
                     tr.Cells.Add(actions);
-                    tblAllDeptsBody.Controls.Add(tr);
+                    tblAllDeptsBody.Rows.Add(tr);
                 }
             }
         }
 
-        protected void btnSaveOrder_Click(object sender, EventArgs e)
-        {
-            if (string.IsNullOrEmpty(hfDeptOrder.Value)) return;
-            int orgId = int.Parse(ddlCompanies.SelectedValue);
-            if (orgId == 0) return;
-
-            string[] ids = hfDeptOrder.Value.Split(',');
-            using (SqlConnection conn = new SqlConnection(connStr))
-            {
-                conn.Open();
-                for (int i = 0; i < ids.Length; i++)
-                {
-                    SqlCommand cmd = new SqlCommand("UPDATE DeptCompanyMapping SET SortOrder=@Sort WHERE DeptID=@DeptID AND OrgID=@OrgID", conn);
-                    cmd.Parameters.AddWithValue("@Sort", i + 1);
-                    cmd.Parameters.AddWithValue("@DeptID", int.Parse(ids[i]));
-                    cmd.Parameters.AddWithValue("@OrgID", orgId);
-                    cmd.ExecuteNonQuery();
-                }
-            }
-            ShowMessage("Order saved successfully.");
-            LoadDepartmentsForCompany();
-        }
-
-        protected void btnDelete_Click(object sender, EventArgs e)
+        private void BtnDeleteAll_Click(object sender, EventArgs e)
         {
             Button btn = (Button)sender;
-            int deptId = int.Parse(btn.CommandArgument);
-
-            int orgId = int.Parse(ddlCompanies.SelectedValue);
-            if (orgId == 0) { ShowMessage("Select a company first", true); return; }
+            if (!int.TryParse(btn.CommandArgument, out int deptId)) return;
 
             using (SqlConnection conn = new SqlConnection(connStr))
             {
                 conn.Open();
-                SqlCommand cmd = new SqlCommand("DELETE FROM DeptCompanyMapping WHERE DeptID=@DeptID AND OrgID=@OrgID", conn);
-                cmd.Parameters.AddWithValue("@DeptID", deptId);
-                cmd.Parameters.AddWithValue("@OrgID", orgId);
-                cmd.ExecuteNonQuery();
-            }
-
-            ShowMessage("Department removed from the selected company.");
-            LoadDepartmentsForCompany();
-        }
-
-        protected void btnDeleteAll_Click(object sender, EventArgs e)
-        {
-            Button btn = (Button)sender;
-            int deptId = int.Parse(btn.CommandArgument);
-
-            using (SqlConnection conn = new SqlConnection(connStr))
-            {
-                conn.Open();
-
                 SqlCommand cmdMap = new SqlCommand("DELETE FROM DeptCompanyMapping WHERE DeptID=@DeptID", conn);
                 cmdMap.Parameters.AddWithValue("@DeptID", deptId);
                 cmdMap.ExecuteNonQuery();

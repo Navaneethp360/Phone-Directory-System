@@ -24,13 +24,40 @@ namespace PhoneDir.Masters
         protected global::System.Web.UI.WebControls.Label lblMessage;
 
         /// <summary>
-        /// hfSubDeptID control.
+        /// txtSubDeptName control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.HiddenField hfSubDeptID;
+        protected global::System.Web.UI.WebControls.TextBox txtSubDeptName;
+
+        /// <summary>
+        /// chkDepartments control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.CheckBoxList chkDepartments;
+
+        /// <summary>
+        /// btnAddSubDept control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnAddSubDept;
+
+        /// <summary>
+        /// ddlDepartments control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.DropDownList ddlDepartments;
 
         /// <summary>
         /// hfSubDeptOrder control.
@@ -42,31 +69,13 @@ namespace PhoneDir.Masters
         protected global::System.Web.UI.WebControls.HiddenField hfSubDeptOrder;
 
         /// <summary>
-        /// txtSubDeptName control.
+        /// tblSubDeptsBody control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.TextBox txtSubDeptName;
-
-        /// <summary>
-        /// departmentCheckboxes control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.HtmlControls.HtmlGenericControl departmentCheckboxes;
-
-        /// <summary>
-        /// btnSaveSubDept control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnSaveSubDept;
+        protected global::System.Web.UI.HtmlControls.HtmlGenericControl tblSubDeptsBody;
 
         /// <summary>
         /// btnSaveOrder control.
@@ -78,12 +87,12 @@ namespace PhoneDir.Masters
         protected global::System.Web.UI.WebControls.Button btnSaveOrder;
 
         /// <summary>
-        /// subDeptTableBody control.
+        /// tblAllSubDeptsBody control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.HtmlControls.HtmlGenericControl subDeptTableBody;
+        protected global::System.Web.UI.WebControls.Table tblAllSubDeptsBody;
     }
 }

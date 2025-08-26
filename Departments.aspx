@@ -21,7 +21,6 @@
 
 <div class="page-content">
 
-    <!-- Company-specific Departments -->
     <div class="page-header">
         <h2>🏢 Manage Departments</h2>
         <p class="subtitle">Add, reorder, or remove departments per company</p>
@@ -29,7 +28,6 @@
 
     <asp:Label ID="lblMessage" runat="server" CssClass="status-message" Visible="false" />
 
-    <!-- Add Department -->
     <div class="form-group">
         <label>Department Name:</label>
         <asp:TextBox ID="txtDeptName" runat="server" CssClass="form-control" />
@@ -42,30 +40,29 @@
 
     <hr />
 
-    <!-- Company Dropdown -->
     <div class="form-group">
         <label>Select Company:</label>
         <asp:DropDownList ID="ddlCompanies" runat="server" CssClass="form-control"
             AutoPostBack="true" OnSelectedIndexChanged="ddlCompanies_SelectedIndexChanged" />
     </div>
 
-    <!-- Company-specific Departments Table -->
     <asp:HiddenField ID="hfDeptOrder" runat="server" />
 
-    <table id="tblDepts" class="table">
-        <thead>
-            <tr>
-                <th>Department Name</th>
-                <th style="width:180px;">Actions</th>
-            </tr>
-        </thead>
-        <tbody id="tblDeptsBody" runat="server"></tbody>
-    </table>
+    <asp:GridView ID="gvDepartments" runat="server" AutoGenerateColumns="False" CssClass="table"
+        DataKeyNames="DeptID" OnRowCommand="gvDepartments_RowCommand" OnRowDataBound="gvDepartments_RowDataBound">
+        <Columns>
+            <asp:BoundField DataField="DeptName" HeaderText="Department Name" />
+            <asp:TemplateField>
+                <ItemTemplate>
+                    <asp:Button ID="btnDelete" runat="server" Text="Delete" CssClass="btn"
+                        CommandName="DeleteDept" CommandArgument='<%# Eval("DeptID") %>' />
+                </ItemTemplate>
+            </asp:TemplateField>
+        </Columns>
+    </asp:GridView>
 
     <asp:Button ID="btnSaveOrder" runat="server" Text="Save Order" CssClass="btn" OnClick="btnSaveOrder_Click" />
-    <asp:Button ID="btnDelete" runat="server" Style="display:none;" OnClick="btnDelete_Click" />
 
-    <!-- All Departments Section -->
     <hr />
     <div class="page-header">
         <h2>🗂️ All Departments</h2>
@@ -79,18 +76,20 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        var tbody = document.getElementById('<%= tblDeptsBody.ClientID %>');
-
-        Sortable.create(tbody, {
-            animation: 150,
-            ghostClass: 'drag-placeholder',
-            onEnd: function () {
-                var ids = Array.from(tbody.children).map(function (r) {
-                    return r.getAttribute('data-id');
-                });
-                document.getElementById('<%= hfDeptOrder.ClientID %>').value = ids.join(',');
-            }
-        });
+        var tbody = document.querySelector("#<%= gvDepartments.ClientID %> tbody");
+        if (tbody) {
+            Sortable.create(tbody, {
+                animation: 150,
+                ghostClass: 'drag-placeholder',
+                handle: 'td',
+                draggable: 'tr',
+                onEnd: function () {
+                    var ids = Array.from(tbody.querySelectorAll('tr[data-id]'))
+                        .map(r => r.getAttribute('data-id'));
+                    document.getElementById('<%= hfDeptOrder.ClientID %>').value = ids.join(',');
+                }
+            });
+        }
     });
 </script>
 </asp:Content>

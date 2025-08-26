@@ -1,10 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Data.SqlClient;
-using System.Linq;
-using System.Web.UI;
-using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
 
 namespace PhoneDir.Masters
@@ -15,13 +11,17 @@ namespace PhoneDir.Masters
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            BindDepartments();
-            BindGrid();
+            LoadAllSubDepartments();
+            if (!IsPostBack)
+            {
+                BindDepartmentsCheckList();
+                BindDepartmentDropdown();
+            }
         }
 
-        private void BindDepartments()
+        private void BindDepartmentsCheckList()
         {
-            departmentCheckboxes.Controls.Clear();
+            chkDepartments.Items.Clear();
             using (SqlConnection conn = new SqlConnection(connStr))
             {
                 conn.Open();
@@ -29,172 +29,203 @@ namespace PhoneDir.Masters
                 SqlDataReader dr = cmd.ExecuteReader();
                 while (dr.Read())
                 {
-                    CheckBox chk = new CheckBox { ID = "chk_" + dr["DeptID"], Text = dr["DeptName"].ToString(), InputAttributes = { ["value"] = dr["DeptID"].ToString() } };
-                    departmentCheckboxes.Controls.Add(chk);
+                    chkDepartments.Items.Add(new ListItem(dr["DeptName"].ToString(), dr["DeptID"].ToString()));
                 }
             }
         }
 
-        private void BindGrid()
+        private void BindDepartmentDropdown()
         {
-            subDeptTableBody.Controls.Clear();
+            ddlDepartments.Items.Clear();
+            ddlDepartments.Items.Add(new ListItem("--Select Department--", "0"));
             using (SqlConnection conn = new SqlConnection(connStr))
             {
                 conn.Open();
-                string sql = @"
-            SELECT d.DeptID, d.DeptName,
-       s.SubDeptID, s.SubDeptName,
-       m.SortOrder
-FROM SubDeptDepartmentMapping m
-INNER JOIN SubDeptMasters s ON m.SubDeptID = s.SubDeptID
-INNER JOIN DeptMasters d ON m.DeptID = d.DeptID
-ORDER BY d.SortOrder, m.SortOrder";
-
-                SqlDataAdapter da = new SqlDataAdapter(sql, conn);
-                DataTable dt = new DataTable();
-                da.Fill(dt);
-
-                foreach (DataRow dr in dt.Rows)
-                {
-                    TableRow tr = new TableRow();
-                    tr.Attributes["data-id"] = dr["SubDeptID"].ToString();
-
-                    TableCell tcName = new TableCell { Text = dr["SubDeptName"].ToString() };
-                    tr.Cells.Add(tcName);
-
-                    TableCell tcDepartments = new TableCell { Text = dr["Departments"].ToString() };
-                    tr.Cells.Add(tcDepartments);
-
-                    TableCell tcActions = new TableCell();
-
-                    // Edit button (client-side, no server click)
-                    Button btnEdit = new Button { Text = "Edit", CssClass = "btn", ID = "btnEdit_" + dr["SubDeptID"] };
-                    var ids = GetDepartmentIDs(Convert.ToInt32(dr["SubDeptID"]));
-                    btnEdit.Attributes["onclick"] = $"editSubDept({dr["SubDeptID"]}, '{dr["SubDeptName"]}', [{string.Join(",", ids)}]); return false;";
-                    tcActions.Controls.Add(btnEdit);
-
-                    tcActions.Controls.Add(new LiteralControl("&nbsp;"));
-
-                    // Delete button (server-side)
-                    Button btnDelete = new Button
-                    {
-                        Text = "Delete",
-                        CssClass = "btn",
-                        CommandArgument = dr["SubDeptID"].ToString(),
-                        ID = "btnDelete_" + dr["SubDeptID"]
-                    };
-                    btnDelete.Click += BtnDelete_Click;
-                    tcActions.Controls.Add(btnDelete);
-
-                    tr.Cells.Add(tcActions);
-                    subDeptTableBody.Controls.Add(tr);
-                }
-            }
-        }
-
-        private List<int> GetDepartmentIDs(int subDeptId)
-        {
-            List<int> list = new List<int>();
-            using (SqlConnection conn = new SqlConnection(connStr))
-            {
-                conn.Open();
-                SqlCommand cmd = new SqlCommand("SELECT DeptID FROM SubDeptDepartmentMapping WHERE SubDeptID=@SubDeptID", conn);
-                cmd.Parameters.AddWithValue("@SubDeptID", subDeptId);
+                SqlCommand cmd = new SqlCommand("SELECT DeptID, DeptName FROM DeptMasters ORDER BY SortOrder", conn);
                 SqlDataReader dr = cmd.ExecuteReader();
-                while (dr.Read()) list.Add(Convert.ToInt32(dr["DeptID"]));
+                while (dr.Read())
+                {
+                    ddlDepartments.Items.Add(new ListItem(dr["DeptName"].ToString(), dr["DeptID"].ToString()));
+                }
             }
-            return list;
         }
 
-        protected void btnSaveSubDept_Click(object sender, EventArgs e)
+        protected void btnAddSubDept_Click(object sender, EventArgs e)
         {
-            string name = txtSubDeptName.Text.Trim();
-            if (string.IsNullOrEmpty(name)) { ShowMessage("SubDepartment name cannot be empty.", true); return; }
+            string subDeptName = txtSubDeptName.Text.Trim();
+            if (string.IsNullOrEmpty(subDeptName)) { ShowMessage("Enter subdepartment name", true); return; }
 
-            List<int> selectedDepartments = new List<int>();
-            foreach (Control c in departmentCheckboxes.Controls)
-                if (c is CheckBox chk && chk.Checked)
-                    selectedDepartments.Add(int.Parse(chk.InputAttributes["value"]));
+            List<int> selectedDepts = new List<int>();
+            foreach (ListItem li in chkDepartments.Items)
+                if (li.Selected) selectedDepts.Add(int.Parse(li.Value));
 
-            if (!selectedDepartments.Any()) { ShowMessage("Select at least one department.", true); return; }
+            if (selectedDepts.Count == 0) { ShowMessage("Select at least one department", true); return; }
 
             int subDeptId = 0;
-            if (!string.IsNullOrEmpty(hfSubDeptID.Value)) subDeptId = int.Parse(hfSubDeptID.Value);
-
             using (SqlConnection conn = new SqlConnection(connStr))
             {
                 conn.Open();
-                if (subDeptId == 0)
+                SqlCommand checkCmd = new SqlCommand("SELECT SubDeptID FROM SubDeptMasters WHERE SubDeptName=@Name", conn);
+                checkCmd.Parameters.AddWithValue("@Name", subDeptName);
+                var obj = checkCmd.ExecuteScalar();
+                if (obj == null)
                 {
-                    SqlCommand cmd = new SqlCommand("INSERT INTO SubDeptMasters (SubDeptName, SortOrder) OUTPUT INSERTED.SubDeptID VALUES (@Name, ISNULL((SELECT MAX(SortOrder) FROM SubDeptMasters),0)+1)", conn);
-                    cmd.Parameters.AddWithValue("@Name", name);
-                    subDeptId = (int)cmd.ExecuteScalar();
+                    SqlCommand insertCmd = new SqlCommand(
+                        "INSERT INTO SubDeptMasters (SubDeptName, SortOrder) OUTPUT INSERTED.SubDeptID VALUES (@Name, ISNULL((SELECT MAX(SortOrder) FROM SubDeptMasters),0)+1)", conn);
+                    insertCmd.Parameters.AddWithValue("@Name", subDeptName);
+                    subDeptId = (int)insertCmd.ExecuteScalar();
                 }
                 else
-                {
-                    SqlCommand cmd = new SqlCommand("UPDATE SubDeptMasters SET SubDeptName=@Name WHERE SubDeptID=@ID", conn);
-                    cmd.Parameters.AddWithValue("@Name", name);
-                    cmd.Parameters.AddWithValue("@ID", subDeptId);
-                    cmd.ExecuteNonQuery();
+                    subDeptId = (int)obj;
 
-                    SqlCommand del = new SqlCommand("DELETE FROM SubDeptDepartmentMapping WHERE SubDeptID=@ID", conn);
-                    del.Parameters.AddWithValue("@ID", subDeptId);
-                    del.ExecuteNonQuery();
-                }
-
-                foreach (var deptID in selectedDepartments)
+                foreach (var deptId in selectedDepts)
                 {
-                    SqlCommand map = new SqlCommand("INSERT INTO SubDeptDepartmentMapping (SubDeptID, DeptID) VALUES (@SubDeptID,@DeptID)", conn);
-                    map.Parameters.AddWithValue("@SubDeptID", subDeptId);
-                    map.Parameters.AddWithValue("@DeptID", deptID);
-                    map.ExecuteNonQuery();
+                    SqlCommand mapCmd = new SqlCommand(
+                        "IF NOT EXISTS (SELECT 1 FROM SubDeptDepartmentMapping WHERE SubDeptID=@SubDeptID AND DeptID=@DeptID) " +
+                        "INSERT INTO SubDeptDepartmentMapping (SubDeptID, DeptID, SortOrder) VALUES (@SubDeptID,@DeptID, ISNULL((SELECT MAX(SortOrder) FROM SubDeptDepartmentMapping WHERE DeptID=@DeptID),0)+1)", conn);
+                    mapCmd.Parameters.AddWithValue("@SubDeptID", subDeptId);
+                    mapCmd.Parameters.AddWithValue("@DeptID", deptId);
+                    mapCmd.ExecuteNonQuery();
                 }
             }
 
-            ClearForm();
             ShowMessage("SubDepartment saved successfully.");
-            BindGrid();
+            ClearForm();
+            LoadSubDepartmentsForDept();
+            LoadAllSubDepartments();
         }
 
-        private void BtnDelete_Click(object sender, EventArgs e)
+        protected void ddlDepartments_SelectedIndexChanged(object sender, EventArgs e)
         {
-            Button btn = sender as Button;
-            int subDeptId = Convert.ToInt32(btn.CommandArgument);
+            LoadSubDepartmentsForDept();
+        }
+
+        private void LoadSubDepartmentsForDept()
+        {
+            tblSubDeptsBody.Controls.Clear();
+            int deptId = int.Parse(ddlDepartments.SelectedValue);
+            if (deptId == 0) return;
 
             using (SqlConnection conn = new SqlConnection(connStr))
             {
                 conn.Open();
-                SqlCommand delMap = new SqlCommand("DELETE FROM SubDeptDepartmentMapping WHERE SubDeptID=@ID", conn);
-                delMap.Parameters.AddWithValue("@ID", subDeptId);
-                delMap.ExecuteNonQuery();
+                SqlCommand cmd = new SqlCommand(
+                    "SELECT s.SubDeptID, s.SubDeptName FROM SubDeptDepartmentMapping m INNER JOIN SubDeptMasters s ON m.SubDeptID=s.SubDeptID WHERE m.DeptID=@DeptID ORDER BY m.SortOrder", conn);
+                cmd.Parameters.AddWithValue("@DeptID", deptId);
+                SqlDataReader dr = cmd.ExecuteReader();
+                while (dr.Read())
+                {
+                    TableRow tr = new TableRow { Attributes = { ["data-id"] = dr["SubDeptID"].ToString() } };
+                    tr.Cells.Add(new TableCell { Text = dr["SubDeptName"].ToString() });
 
-                SqlCommand delSubDept = new SqlCommand("DELETE FROM SubDeptMasters WHERE SubDeptID=@ID", conn);
-                delSubDept.Parameters.AddWithValue("@ID", subDeptId);
-                delSubDept.ExecuteNonQuery();
+                    TableCell actions = new TableCell();
+                    Button btnRemove = new Button { Text = "Remove", CssClass = "btn" };
+                    btnRemove.CommandArgument = $"{dr["SubDeptID"]},{deptId}";
+                    btnRemove.Click += BtnRemove_Click;
+                    actions.Controls.Add(btnRemove);
+
+                    tr.Cells.Add(actions);
+                    tblSubDeptsBody.Controls.Add(tr);
+                }
             }
+        }
 
-            ShowMessage("SubDepartment deleted successfully.");
-            BindGrid();
+        private void BtnRemove_Click(object sender, EventArgs e)
+        {
+            Button btn = (Button)sender;
+            string[] args = btn.CommandArgument.Split(',');
+            int subDeptId = int.Parse(args[0]);
+            int deptId = int.Parse(args[1]);
+            DeleteSubDept(subDeptId, deptId);
         }
 
         protected void btnSaveOrder_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrEmpty(hfSubDeptOrder.Value)) return;
-            string[] ids = hfSubDeptOrder.Value.Split(',');
+            int deptId = int.Parse(ddlDepartments.SelectedValue);
+            if (deptId == 0) return;
 
+            string[] ids = hfSubDeptOrder.Value.Split(',');
             using (SqlConnection conn = new SqlConnection(connStr))
             {
                 conn.Open();
                 for (int i = 0; i < ids.Length; i++)
                 {
-                    SqlCommand cmd = new SqlCommand("UPDATE SubDeptMasters SET SortOrder=@Sort WHERE SubDeptID=@ID", conn);
+                    SqlCommand cmd = new SqlCommand("UPDATE SubDeptDepartmentMapping SET SortOrder=@Sort WHERE SubDeptID=@SubDeptID AND DeptID=@DeptID", conn);
                     cmd.Parameters.AddWithValue("@Sort", i + 1);
-                    cmd.Parameters.AddWithValue("@ID", int.Parse(ids[i]));
+                    cmd.Parameters.AddWithValue("@SubDeptID", int.Parse(ids[i]));
+                    cmd.Parameters.AddWithValue("@DeptID", deptId);
                     cmd.ExecuteNonQuery();
                 }
             }
-            ShowMessage("SubDepartment order updated successfully.");
-            BindGrid();
+            ShowMessage("Order saved successfully.");
+            LoadSubDepartmentsForDept();
+        }
+
+        protected void DeleteSubDept(int subDeptId, int deptId)
+        {
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+                SqlCommand cmd = new SqlCommand(
+                    "DELETE FROM SubDeptDepartmentMapping WHERE SubDeptID=@SubDeptID AND DeptID=@DeptID", conn);
+                cmd.Parameters.AddWithValue("@SubDeptID", subDeptId);
+                cmd.Parameters.AddWithValue("@DeptID", deptId);
+                cmd.ExecuteNonQuery();
+            }
+            ShowMessage("SubDepartment removed from the selected department.");
+            LoadSubDepartmentsForDept();
+        }
+
+        protected void DeleteSubDeptAll(int subDeptId)
+        {
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+                SqlCommand cmd = new SqlCommand(
+                    "DELETE FROM SubDeptDepartmentMapping WHERE SubDeptID=@SubDeptID;" +
+                    "DELETE FROM SubDeptMasters WHERE SubDeptID=@SubDeptID;", conn);
+                cmd.Parameters.AddWithValue("@SubDeptID", subDeptId);
+                cmd.ExecuteNonQuery();
+            }
+            ShowMessage("SubDepartment deleted from all departments.");
+            LoadSubDepartmentsForDept();
+            LoadAllSubDepartments();
+        }
+
+        protected void btnDeleteAll_Click(object sender, EventArgs e)
+        {
+            Button btn = (Button)sender;
+            int subDeptId = int.Parse(btn.CommandArgument);
+            DeleteSubDeptAll(subDeptId);
+        }
+
+        private void LoadAllSubDepartments()
+        {
+            tblAllSubDeptsBody.Rows.Clear();
+
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+                SqlCommand cmd = new SqlCommand("SELECT SubDeptID, SubDeptName FROM SubDeptMasters ORDER BY SortOrder", conn);
+                SqlDataReader dr = cmd.ExecuteReader();
+                while (dr.Read())
+                {
+                    TableRow tr = new TableRow();
+
+                    TableCell cellName = new TableCell { Text = dr["SubDeptName"].ToString() };
+                    tr.Cells.Add(cellName);
+
+                    TableCell cellActions = new TableCell();
+                    Button btnDeleteAll = new Button { Text = "Delete All", CssClass = "btn" };
+                    btnDeleteAll.CommandArgument = dr["SubDeptID"].ToString();
+                    btnDeleteAll.Click += btnDeleteAll_Click;
+                    cellActions.Controls.Add(btnDeleteAll);
+
+                    tr.Cells.Add(cellActions);
+                    tblAllSubDeptsBody.Rows.Add(tr);
+                }
+            }
         }
 
         private void ShowMessage(string msg, bool isError = false)
@@ -207,8 +238,7 @@ ORDER BY d.SortOrder, m.SortOrder";
         private void ClearForm()
         {
             txtSubDeptName.Text = "";
-            hfSubDeptID.Value = "";
-            foreach (Control c in departmentCheckboxes.Controls) if (c is CheckBox chk) chk.Checked = false;
+            foreach (ListItem li in chkDepartments.Items) li.Selected = false;
         }
     }
 }
