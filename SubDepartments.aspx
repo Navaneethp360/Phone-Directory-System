@@ -1,4 +1,5 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="SubDepartments.aspx.cs" Inherits="PhoneDir.Masters.SubDepartments" MasterPageFile="~/Site.master" %>
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="SubDepartments.aspx.cs" 
+    Inherits="PhoneDir.Masters.SubDepartments" MasterPageFile="~/Site.master" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
 <style>
@@ -18,57 +19,60 @@
 .status-message.error { background-color:#fcebea; color:#c62828; border-color:#f5c6cb; }
 .drag-placeholder { background-color: rgba(44,125,177,0.1); height:50px; margin-bottom:5px; border:1px dashed #2c7db1; border-radius:4px; }
 </style>
-
 <div class="page-content">
 
-    <!-- Company-specific SubDepartments -->
     <div class="page-header">
-        <h2>🗂 Manage SubDepartments</h2>
-        <p class="subtitle">Add, reorder, or remove subdepartments per department</p>
+        <h2>📂 Manage Sub-Departments</h2>
+        <p class="subtitle">Add, reorder, or remove sub-departments per department</p>
     </div>
 
     <asp:Label ID="lblMessage" runat="server" CssClass="status-message" Visible="false" />
 
-    <!-- Add SubDepartment -->
+    <!-- SubDept name input -->
     <div class="form-group">
-        <label>SubDepartment Name:</label>
+        <label>Sub-Department Name:</label>
         <asp:TextBox ID="txtSubDeptName" runat="server" CssClass="form-control" />
     </div>
+
+    <!-- Assign to departments -->
     <div class="form-group">
-        <label>Select Parent Departments:</label>
+        <label>Assign to Departments:</label>
         <asp:CheckBoxList ID="chkDepartments" runat="server" RepeatDirection="Horizontal" CssClass="form-control" />
     </div>
-    <asp:Button ID="btnAddSubDept" runat="server" Text="Add / Update SubDepartment" CssClass="btn" OnClick="btnAddSubDept_Click" />
+    <asp:Button ID="btnAddSubDept" runat="server" Text="Add / Update Sub-Department" CssClass="btn" 
+        OnClick="btnAddSubDept_Click" />
 
     <hr />
 
-    <!-- Department Dropdown -->
+    <!-- Dropdown select Dept -->
     <div class="form-group">
         <label>Select Department:</label>
         <asp:DropDownList ID="ddlDepartments" runat="server" CssClass="form-control"
             AutoPostBack="true" OnSelectedIndexChanged="ddlDepartments_SelectedIndexChanged" />
     </div>
 
-    <!-- Department-specific SubDepartments Table -->
     <asp:HiddenField ID="hfSubDeptOrder" runat="server" />
 
-    <table id="tblSubDepts" class="table">
-        <thead>
-            <tr>
-                <th>SubDepartment Name</th>
-                <th style="width:180px;">Actions</th>
-            </tr>
-        </thead>
-        <tbody id="tblSubDeptsBody" runat="server"></tbody>
-    </table>
+    <!-- SubDept grid per Dept -->
+    <asp:GridView ID="gvSubDepts" runat="server" AutoGenerateColumns="False" CssClass="table"
+        DataKeyNames="SubDeptID" OnRowCommand="gvSubDepts_RowCommand" OnRowDataBound="gvSubDepts_RowDataBound">
+        <Columns>
+            <asp:BoundField DataField="SubDeptName" HeaderText="Sub-Department Name" />
+            <asp:TemplateField>
+                <ItemTemplate>
+                    <asp:Button ID="btnDelete" runat="server" Text="Delete" CssClass="btn"
+                        CommandName="DeleteSubDept" CommandArgument='<%# Eval("SubDeptID") %>' />
+                </ItemTemplate>
+            </asp:TemplateField>
+        </Columns>
+    </asp:GridView>
 
     <asp:Button ID="btnSaveOrder" runat="server" Text="Save Order" CssClass="btn" OnClick="btnSaveOrder_Click" />
 
-    <!-- All SubDepartments Section -->
     <hr />
     <div class="page-header">
-        <h2>🗂️ All SubDepartments</h2>
-        <p class="subtitle">Delete any subdepartment completely from all departments</p>
+        <h2>🗂️ All Sub-Departments</h2>
+        <p class="subtitle">Delete any sub-department completely from all departments</p>
     </div>
 
     <asp:Table ID="tblAllSubDeptsBody" runat="server" CssClass="table"></asp:Table>
@@ -78,18 +82,20 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        var tbody = document.getElementById('<%= tblSubDeptsBody.ClientID %>');
-
-    Sortable.create(tbody, {
-        animation: 150,
-        ghostClass: 'drag-placeholder',
-        onEnd: function () {
-            var ids = Array.from(tbody.children).map(function (r) {
-                return r.getAttribute('data-id');
+        var tbody = document.querySelector("#<%= gvSubDepts.ClientID %> tbody");
+        if (tbody) {
+            Sortable.create(tbody, {
+                animation: 150,
+                ghostClass: 'drag-placeholder',
+                handle: 'td',
+                draggable: 'tr',
+                onEnd: function () {
+                    var ids = Array.from(tbody.querySelectorAll('tr[data-id]'))
+                        .map(r => r.getAttribute('data-id'));
+                    document.getElementById('<%= hfSubDeptOrder.ClientID %>').value = ids.join(',');
+                }
             });
-            document.getElementById('<%= hfSubDeptOrder.ClientID %>').value = ids.join(',');
         }
     });
-});
 </script>
 </asp:Content>
