@@ -3,19 +3,37 @@
 <head>
     <title>HEISCO Employee Directory</title>
     <style>
+        /* ==================== LIGHT MODE ==================== */
+        :root {
+            --bg-color: #f5f7fa;
+            --header-bg: #022489;
+            --header-color: white;
+            --tab-bg: #f0f8ff;
+            --tab-border: #cfe5f9;
+            --tab-active-bg: #022489;
+            --tab-content-bg: rgba(255,255,255,0.95);
+            --table-header-bg: #022489; /* department name row bg */
+            --table-row-even: #f9fafd;
+            --table-text: #000000;
+            --table-header-text: #000000; /* table column headers in light mode */
+            --no-employee-color: #555;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            background: #f5f7fa;
-            color: #333;
+            background: var(--bg-color);
+            color: var(--table-text);
+            transition: all 0.3s;
         }
 
         .header {
-            background: #2c7db1;
-            color: white;
+            background: var(--header-bg);
+            color: var(--header-color);
             padding: 15px 30px;
             display: flex;
             align-items: center;
+            justify-content: space-between;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
@@ -30,29 +48,43 @@
                 font-weight: 600;
             }
 
+        .theme-toggle {
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            color: var(--header-color);
+            transition: transform 0.3s;
+        }
+
+            .theme-toggle:hover {
+                transform: rotate(20deg);
+            }
+
         .tabs {
             display: flex;
-            border-bottom: 2px solid #cfe5f9;
+            border-bottom: 2px solid var(--tab-border);
             margin: 20px 30px 0 30px;
             cursor: pointer;
         }
 
         .tab {
             padding: 10px 20px;
-            background: #f0f8ff;
+            background: var(--tab-bg);
             margin-right: 5px;
             border-radius: 6px 6px 0 0;
-            border: 1px solid #cfe5f9;
+            border: 1px solid var(--tab-border);
+            color: var(--table-text);
             transition: all 0.2s;
         }
 
             .tab:hover {
-                background: #357ABD;
+                background: var(--tab-active-bg);
                 color: white;
             }
 
             .tab.active {
-                background: #357ABD;
+                background: var(--tab-active-bg);
                 color: white;
                 font-weight: 600;
             }
@@ -60,10 +92,11 @@
         .tab-content {
             margin: 0 30px 30px 30px;
             padding: 15px;
-            background: rgba(255,255,255,0.95);
-            border: 1px solid #cfe5f9;
+            background: var(--tab-content-bg);
+            border: 1px solid var(--tab-border);
             border-radius: 0 6px 6px 6px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: all 0.3s;
         }
 
         .company-section {
@@ -74,47 +107,191 @@
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 25px;
+            color: var(--table-text);
+            transition: all 0.3s;
         }
 
-            .dept-table thead {
-                background: #2c7db1;
-                color: white;
+            .dept-table thead .dept-name-row {
+                background: var(--table-header-bg);
+                color: var(--header-color);
+                font-weight: 600;
+                letter-spacing: 0.5px;
+            }
+
+            .dept-table thead tr:nth-child(2) th {
+                background: var(--table-header-bg);
+                color:white;
+                font-weight: 600;
+                letter-spacing: 0.5px;
+                padding: 8px 12px;
+                text-align: left;
             }
 
             .dept-table th, .dept-table td {
                 padding: 8px 12px;
                 text-align: left;
-                border-bottom: 1px solid #e2effa;
+                border-bottom: 1px solid var(--tab-border);
             }
 
             .dept-table tr:nth-child(even) {
-                background: #f9fafd;
+                background: var(--table-row-even);
             }
 
         .dept-name-row th {
             font-size: 1.1rem;
-            font-weight: 600;
             padding-top: 12px;
             padding-bottom: 12px;
         }
 
         .no-employee {
             font-style: italic;
-            color: #999;
+            color: var(--no-employee-color);
             padding: 8px;
         }
+
+        /* ==================== DARK MODE (FULLY INDEPENDENT) ==================== */
+        body.dark-mode {
+            background: #101c2b;
+            color: #e0e0e0;
+        }
+
+            body.dark-mode .header {
+                background: #0d1321;
+                color: #f5f5f5;
+                box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+            }
+
+                body.dark-mode .header h1 {
+                    color: #f5f5f5;
+                }
+
+            body.dark-mode .theme-toggle {
+                color: #f5f5f5;
+            }
+
+                body.dark-mode .theme-toggle:hover {
+                    background: rgba(255,255,255,0.1);
+                }
+
+            body.dark-mode .tabs {
+                background: #162536;
+                border-bottom: 2px solid #2a3a50;
+            }
+
+            body.dark-mode .tab {
+                background: #162536;
+                border: 1px solid #2a3a50;
+                color: #e0e0e0;
+            }
+
+                body.dark-mode .tab:hover {
+                    background: #1b2a40;
+                    color: #ffffff;
+                }
+
+                body.dark-mode .tab.active {
+                    background: #1b2a40;
+                    color: #ffffff;
+                    font-weight: 600;
+                }
+
+            body.dark-mode .tab-content {
+                background: #182338;
+                border: 1px solid #2a3a50;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+
+            body.dark-mode .dept-table {
+                color: #e0e0e0;
+                background: #101c2b;
+            }
+
+                body.dark-mode .dept-table thead .dept-name-row {
+                    background: #1b2a40;
+                    color: #ffffff;
+                }
+
+                body.dark-mode .dept-table thead tr:nth-child(2) th {
+                    background: #1b2a40;
+                    color: #ffffff;
+                }
+
+                body.dark-mode .dept-table th,
+                body.dark-mode .dept-table td {
+                    border-bottom: 1px solid #2a3a50;
+                    color: #e0e0e0;
+                }
+
+                body.dark-mode .dept-table tr {
+                    background: #101c2b;
+                }
+
+            body.dark-mode .no-employee {
+                color: #a0a0a0;
+            }
+        .theme-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #fff;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s;
+        }
+
+            .theme-toggle:hover {
+                transform: rotate(20deg);
+            }
+
+            .theme-toggle svg {
+                display: block;
+            }
+
     </style>
 </head>
 <body>
     <div class="header">
-        <img src="HEISCO.png" alt="HEISCO Logo" />
-        <h1>HEISCO Employee Directory</h1>
+        <div style="display:flex; align-items:center;">
+            <img src="HEISCO.png" alt="HEISCO Logo" />
+            <h1>HEISCO Employee Directory</h1>
+        </div>
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+            <svg id="iconMoon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M21 12.79A9 9 0 1111.21 3c0 .28.02.56.05.83A7 7 0 0021 12.79z" />
+            </svg>
+            <svg id="iconSun" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="display:none">
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+            </svg>
+        </button>
     </div>
 
     <div id="companiesTabs" class="tabs"></div>
     <div id="companyContent" class="tab-content"></div>
 
     <script>
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            const moon = document.getElementById('iconMoon');
+            const sun = document.getElementById('iconSun');
+            if (document.body.classList.contains('dark-mode')) {
+                moon.style.display = 'none';
+                sun.style.display = 'inline';
+            } else {
+                moon.style.display = 'inline';
+                sun.style.display = 'none';
+            }
+        }
+
         function showCompany(companyId) {
             document.querySelectorAll('.company-section').forEach(c => c.style.display = 'none');
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -130,7 +307,6 @@
 
             data.forEach(c => {
                 tabsDiv.innerHTML += `<div class="tab" id="tab_${c.OrgID}" onclick="showCompany(${c.OrgID})">${c.OrgName}</div>`;
-
                 let companyHTML = `<div id="company_${c.OrgID}" class="company-section">`;
 
                 if (!c.Departments || c.Departments.length === 0) {
@@ -138,36 +314,36 @@
                 } else {
                     c.Departments.forEach(d => {
                         companyHTML += `<table class="dept-table">
-                                    <thead>
-                                        <tr class="dept-name-row">
-                                            <th colspan="4">${d.DeptName}</th>
-                                        </tr>
-                                        <tr>
-                                            <th>Name</th>
-                                            <th>Designation</th>
-                                            <th>Extension</th>
-                                            <th>Location / SubDept</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>`;
+                                <thead>
+                                    <tr class="dept-name-row">
+                                        <th colspan="5">${d.DeptName}</th>
+                                    </tr>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Designation</th>
+                                        <th>Extension</th>
+                                        <th>Location</th>
+                                        <th>SubDept</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
 
                         if (!d.Employees || d.Employees.length === 0) {
-                            companyHTML += `<tr><td colspan="4" class="no-employee">No employees in this department</td></tr>`;
+                            companyHTML += `<tr><td colspan="5" class="no-employee">No employees in this department</td></tr>`;
                         } else {
                             d.Employees.forEach(e => {
                                 companyHTML += `<tr>
                                         <td>${e.Name || ''}</td>
                                         <td>${e.Designation || ''}</td>
                                         <td>${e.Extension || ''}</td>
-                                        <td>${e.Location || ''}${e.SubDept ? ' / ' + e.SubDept : ''}</td>
+                                        <td>${e.Location || ''}</td>
+                                        <td>${e.SubDept || ''}</td>
                                     </tr>`;
                             });
                         }
-
                         companyHTML += `</tbody></table>`;
                     });
                 }
-
                 companyHTML += '</div>';
                 contentDiv.innerHTML += companyHTML;
             });
