@@ -1,0 +1,159 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>HEISCO Employee Directory</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 0;
+            background: #f5f7fa;
+        }
+
+        .header {
+            background: #2c7db1;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            align-items: center;
+        }
+
+            .header img {
+                height: 50px;
+                margin-right: 20px;
+            }
+
+            .header h1 {
+                margin: 0;
+                font-size: 1.5rem;
+            }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #cfe5f9;
+            margin: 0 30px;
+            cursor: pointer;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: #f0f8ff;
+            margin-right: 5px;
+            border-radius: 6px 6px 0 0;
+            border: 1px solid #cfe5f9;
+        }
+
+            .tab.active {
+                background: #357ABD;
+                color: white;
+                font-weight: 600;
+            }
+
+        .tab-content {
+            margin: 0 30px 30px 30px;
+            padding: 15px;
+            background: rgba(255,255,255,0.95);
+            border: 1px solid #cfe5f9;
+            border-radius: 0 6px 6px 6px;
+        }
+
+        .dept {
+            margin-bottom: 25px;
+        }
+
+        .dept-name {
+            font-weight: 600;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: #2c7db1;
+        }
+
+        .employee {
+            padding: 6px 10px;
+            border-bottom: 1px solid #e2effa;
+        }
+
+            .employee:last-child {
+                border-bottom: none;
+            }
+
+        .employee-name {
+            font-weight: 500;
+        }
+
+        .employee-info {
+            font-size: 0.85rem;
+            color: #555;
+        }
+
+        .no-employee {
+            font-style: italic;
+            color: #999;
+            padding-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="HEISCO.png" alt="HEISCO Logo" />
+        <h1>HEISCO Employee Directory</h1>
+    </div>
+
+    <div id="companiesTabs" class="tabs"></div>
+    <div id="companyContent" class="tab-content"></div>
+
+    <script>
+        function showCompany(companyId) {
+            document.querySelectorAll('.company-section').forEach(c => c.style.display = 'none');
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('company_' + companyId).style.display = 'block';
+            document.getElementById('tab_' + companyId).classList.add('active');
+        }
+
+        function renderDirectory(data) {
+            const tabsDiv = document.getElementById('companiesTabs');
+            const contentDiv = document.getElementById('companyContent');
+            tabsDiv.innerHTML = '';
+            contentDiv.innerHTML = '';
+
+            data.forEach(c => {
+                tabsDiv.innerHTML += `<div class="tab" id="tab_${c.OrgID}" onclick="showCompany(${c.OrgID})">${c.OrgName}</div>`;
+                let companyHTML = `<div id="company_${c.OrgID}" class="company-section" style="display:none;">`;
+
+                if (c.Departments.length === 0) {
+                    companyHTML += `<div class="no-employee">No departments available</div>`;
+                }
+
+                c.Departments.forEach(d => {
+                    companyHTML += `<div class="dept"><div class="dept-name">${d.DeptName}</div>`;
+                    if (!d.Employees || d.Employees.length === 0) {
+                        companyHTML += `<div class="no-employee">No employees in this department</div>`;
+                    } else {
+                        d.Employees.forEach(e => {
+                            companyHTML += `<div class="employee">
+                                    <div class="employee-name">${e.Name} (${e.EmpID})</div>
+                                    <div class="employee-info">${e.Designation} | Ext: ${e.Extension || '-'} | Mobile: ${e.Mobile || '-'} | Location: ${e.Location || '-'} | SubDept: ${e.SubDept || '-'}</div>
+                                </div>`;
+                        });
+                    }
+                    companyHTML += '</div>';
+                });
+
+                companyHTML += '</div>';
+                contentDiv.innerHTML += companyHTML;
+            });
+
+            if (data.length > 0) showCompany(data[0].OrgID);
+        }
+
+        // Fetch data from ASMX service
+        fetch('EmployeeDirectory.asmx/GetDirectory', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: '{}'
+        })
+            .then(r => r.json())
+            .then(resp => renderDirectory(resp.d))
+            .catch(e => console.error(e));
+    </script>
+</body>
+</html>
