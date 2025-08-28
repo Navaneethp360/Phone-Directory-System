@@ -4,9 +4,10 @@
     <title>HEISCO Employee Directory</title>
     <style>
         body {
-            font-family: Arial;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             background: #f5f7fa;
+            color: #333;
         }
 
         .header {
@@ -15,6 +16,7 @@
             padding: 15px 30px;
             display: flex;
             align-items: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
             .header img {
@@ -24,13 +26,14 @@
 
             .header h1 {
                 margin: 0;
-                font-size: 1.5rem;
+                font-size: 1.6rem;
+                font-weight: 600;
             }
 
         .tabs {
             display: flex;
-            border-bottom: 1px solid #cfe5f9;
-            margin: 0 30px;
+            border-bottom: 2px solid #cfe5f9;
+            margin: 20px 30px 0 30px;
             cursor: pointer;
         }
 
@@ -40,7 +43,13 @@
             margin-right: 5px;
             border-radius: 6px 6px 0 0;
             border: 1px solid #cfe5f9;
+            transition: all 0.2s;
         }
+
+            .tab:hover {
+                background: #357ABD;
+                color: white;
+            }
 
             .tab.active {
                 background: #357ABD;
@@ -54,41 +63,45 @@
             background: rgba(255,255,255,0.95);
             border: 1px solid #cfe5f9;
             border-radius: 0 6px 6px 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
 
-        .dept {
+        .company-section {
+            display: none;
+        }
+
+        .dept-table {
+            width: 100%;
+            border-collapse: collapse;
             margin-bottom: 25px;
         }
 
-        .dept-name {
-            font-weight: 600;
-            font-size: 1.2rem;
-            margin-bottom: 10px;
-            color: #2c7db1;
-        }
-
-        .employee {
-            padding: 6px 10px;
-            border-bottom: 1px solid #e2effa;
-        }
-
-            .employee:last-child {
-                border-bottom: none;
+            .dept-table thead {
+                background: #2c7db1;
+                color: white;
             }
 
-        .employee-name {
-            font-weight: 500;
-        }
+            .dept-table th, .dept-table td {
+                padding: 8px 12px;
+                text-align: left;
+                border-bottom: 1px solid #e2effa;
+            }
 
-        .employee-info {
-            font-size: 0.85rem;
-            color: #555;
+            .dept-table tr:nth-child(even) {
+                background: #f9fafd;
+            }
+
+        .dept-name-row th {
+            font-size: 1.1rem;
+            font-weight: 600;
+            padding-top: 12px;
+            padding-bottom: 12px;
         }
 
         .no-employee {
             font-style: italic;
             color: #999;
-            padding-left: 10px;
+            padding: 8px;
         }
     </style>
 </head>
@@ -117,26 +130,43 @@
 
             data.forEach(c => {
                 tabsDiv.innerHTML += `<div class="tab" id="tab_${c.OrgID}" onclick="showCompany(${c.OrgID})">${c.OrgName}</div>`;
-                let companyHTML = `<div id="company_${c.OrgID}" class="company-section" style="display:none;">`;
 
-                if (c.Departments.length === 0) {
+                let companyHTML = `<div id="company_${c.OrgID}" class="company-section">`;
+
+                if (!c.Departments || c.Departments.length === 0) {
                     companyHTML += `<div class="no-employee">No departments available</div>`;
-                }
+                } else {
+                    c.Departments.forEach(d => {
+                        companyHTML += `<table class="dept-table">
+                                    <thead>
+                                        <tr class="dept-name-row">
+                                            <th colspan="4">${d.DeptName}</th>
+                                        </tr>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Designation</th>
+                                            <th>Extension</th>
+                                            <th>Location / SubDept</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>`;
 
-                c.Departments.forEach(d => {
-                    companyHTML += `<div class="dept"><div class="dept-name">${d.DeptName}</div>`;
-                    if (!d.Employees || d.Employees.length === 0) {
-                        companyHTML += `<div class="no-employee">No employees in this department</div>`;
-                    } else {
-                        d.Employees.forEach(e => {
-                            companyHTML += `<div class="employee">
-                                    <div class="employee-name">${e.Name} (${e.EmpID})</div>
-                                    <div class="employee-info">${e.Designation} | Ext: ${e.Extension || '-'} | Mobile: ${e.Mobile || '-'} | Location: ${e.Location || '-'} | SubDept: ${e.SubDept || '-'}</div>
-                                </div>`;
-                        });
-                    }
-                    companyHTML += '</div>';
-                });
+                        if (!d.Employees || d.Employees.length === 0) {
+                            companyHTML += `<tr><td colspan="4" class="no-employee">No employees in this department</td></tr>`;
+                        } else {
+                            d.Employees.forEach(e => {
+                                companyHTML += `<tr>
+                                        <td>${e.Name || ''}</td>
+                                        <td>${e.Designation || ''}</td>
+                                        <td>${e.Extension || ''}</td>
+                                        <td>${e.Location || ''}${e.SubDept ? ' / ' + e.SubDept : ''}</td>
+                                    </tr>`;
+                            });
+                        }
+
+                        companyHTML += `</tbody></table>`;
+                    });
+                }
 
                 companyHTML += '</div>';
                 contentDiv.innerHTML += companyHTML;
@@ -145,7 +175,6 @@
             if (data.length > 0) showCompany(data[0].OrgID);
         }
 
-        // Fetch data from ASMX service
         fetch('EmployeeDirectory.asmx/GetDirectory', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json; charset=utf-8' },
